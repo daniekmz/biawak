@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biawak Foundation - Blockchain & Cryptocurrency Community</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-dragon biawak-icon"></i>
+                <span>Biawak Foundation</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#home" class="nav-link">Beranda</a>
+                <a href="#about" class="nav-link">Tentang</a>
+                <a href="#posts" class="nav-link">Komunitas</a>
+                <a href="#contact" class="nav-link">Kontak</a>
+            </div>
+            <div class="nav-auth">
+                <button class="btn-secondary" onclick="showLoginModal()">Masuk</button>
+                <button class="btn-primary" onclick="showRegisterModal()">Daftar</button>
+            </div>
+            <div class="hamburger" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Biawak Foundation</h1>
+                <p class="hero-subtitle">Komunitas Blockchain & Cryptocurrency Indonesia</p>
+                <p class="hero-description">
+                    Lembaga komunitas publik non-profit yang berdedikasi untuk mempromosikan adopsi dan 
+                    pemanfaatan teknologi blockchain serta cryptocurrency secara bertanggung jawab dan berkelanjutan.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="showRegisterModal()">Bergabung Sekarang</button>
+                    <button class="btn-secondary" onclick="scrollToSection('about')">Pelajari Lebih</button>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="biawak-logo">
+                    <i class="fas fa-dragon"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2>Tentang Biawak Foundation</h2>
+            <div class="about-grid">
+                <div class="about-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Bertanggung Jawab</h3>
+                    <p>Mempromosikan penggunaan teknologi blockchain yang aman dan bertanggung jawab</p>
+                </div>
+                <div class="about-card">
+                    <i class="fas fa-leaf"></i>
+                    <h3>Berkelanjutan</h3>
+                    <p>Mendukung inovasi teknologi yang ramah lingkungan dan berkelanjutan</p>
+                </div>
+                <div class="about-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Komunitas</h3>
+                    <p>Membangun komunitas yang kuat untuk saling berbagi pengetahuan</p>
+                </div>
+                <div class="about-card">
+                    <i class="fas fa-lightbulb"></i>
+                    <h3>Inovasi</h3>
+                    <p>Mendorong inovasi dalam ekosistem blockchain dan cryptocurrency</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Posts Section -->
+    <section id="posts" class="posts">
+        <div class="container">
+            <h2>Komunitas & Diskusi</h2>
+            <div class="posts-header">
+                <button class="btn-primary" onclick="showCreatePostModal()" id="create-post-btn" style="display: none;">
+                    <i class="fas fa-plus"></i> Buat Postingan
+                </button>
+            </div>
+            <div class="posts-container" id="posts-container">
+                <div class="no-posts">
+                    <i class="fas fa-comments"></i>
+                    <p>Memuat postingan...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2>Hubungi Kami</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>info@biawakfoundation.org</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-telegram"></i>
+                        <span>@dropscryptoX</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <i class="fas fa-dragon biawak-icon"></i>
+                    <span>Biawak Foundation</span>
+                </div>
+                <p>&copy; 2021 Biawak Foundation.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>Masuk</h2>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">Masuk</button>
+                <p class="modal-footer">
+                    Belum punya akun? <a href="#" onclick="switchToRegister()">Daftar di sini</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('registerModal')">&times;</span>
+            <h2>Daftar</h2>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="registerName">Nama Lengkap</label>
+                    <input type="text" id="registerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">Konfirmasi Password</label>
+                    <input type="password" id="registerConfirmPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">Daftar</button>
+                <p class="modal-footer">
+                    Sudah punya akun? <a href="#" onclick="switchToLogin()">Masuk di sini</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="createPostModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('createPostModal')">&times;</span>
+            <h2>Buat Postingan Baru</h2>
+            <form id="createPostForm" onsubmit="handleCreatePost(event)">
+                <div class="form-group">
+                    <label for="postTitle">Judul</label>
+                    <input type="text" id="postTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="postContent">Konten</label>
+                    <textarea id="postContent" rows="6" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Posting</button>
+            </form>
+        </div>
+    </div>
+    <!-- Load Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/supabase/client.js"></script>
+    <script src="/supabase/auth.js"></script>
+    <script src="/supabase/posts.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
