@@ -6,6 +6,7 @@
     <title>Biawak Foundation - Blockchain & Cryptocurrency Community</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
     <!-- Navigation -->
@@ -130,12 +131,12 @@
                     <i class="fas fa-dragon biawak-icon"></i>
                     <span>Biawak Foundation</span>
                 </div>
-                <p>&copy; 2021 Biawak Foundation.</p>
+                <p>&copy; <span id="current-year"></span> Biawak Foundation. Semua hak dilindungi.</p>
             </div>
         </div>
     </footer>
 
-    <!-- Login Modal -->
+    <!-- Modals -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('loginModal')">&times;</span>
@@ -157,7 +158,6 @@
         </div>
     </div>
 
-    <!-- Register Modal -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('registerModal')">&times;</span>
@@ -173,11 +173,11 @@
                 </div>
                 <div class="form-group">
                     <label for="registerPassword">Password</label>
-                    <input type="password" id="registerPassword" required>
+                    <input type="password" id="registerPassword" required minlength="6">
                 </div>
                 <div class="form-group">
                     <label for="registerConfirmPassword">Konfirmasi Password</label>
-                    <input type="password" id="registerConfirmPassword" required>
+                    <input type="password" id="registerConfirmPassword" required minlength="6">
                 </div>
                 <button type="submit" class="btn-primary">Daftar</button>
                 <p class="modal-footer">
@@ -187,7 +187,6 @@
         </div>
     </div>
 
-    <!-- Create Post Modal -->
     <div id="createPostModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('createPostModal')">&times;</span>
@@ -195,21 +194,24 @@
             <form id="createPostForm" onsubmit="handleCreatePost(event)">
                 <div class="form-group">
                     <label for="postTitle">Judul</label>
-                    <input type="text" id="postTitle" required>
+                    <input type="text" id="postTitle" required maxlength="100">
                 </div>
                 <div class="form-group">
                     <label for="postContent">Konten</label>
-                    <textarea id="postContent" rows="6" required></textarea>
+                    <textarea id="postContent" rows="6" required maxlength="2000"></textarea>
                 </div>
                 <button type="submit" class="btn-primary">Posting</button>
             </form>
         </div>
     </div>
-    <!-- Load Supabase JS -->
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/supabase/client.js"></script>
-    <script src="/supabase/auth.js"></script>
-    <script src="/supabase/posts.js"></script>
-    <script src="script.js"></script>
+    <script src="src/config/supabase.js"></script>
+    <script src="src/utils/helpers.js"></script>
+    <script src="src/utils/notifications.js"></script>
+    <script src="src/auth/auth.js"></script>
+    <script src="src/posts/posts.js"></script>
+    <script src="src/script.js"></script>
 </body>
 </html>
