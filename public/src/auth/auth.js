@@ -1,106 +1,181 @@
-// src/auth/auth.js
-import { supabase, authHelpers } from '../config/supabase.js'
+// Wait for Supabase to be loaded and ensure proper initialization
+let supabase;
 
-// Auth functions untuk kompatibilitas dengan kode existing
-const authFunctions = {
-  async getSession() {
+// Initialize Supabase client with proper error handling
+function initializeSupabase() {
     try {
-      const { data: { session }, error } = await authHelpers.getSession()
-      if (error) throw error
-      return session
-    } catch (error) {
-      console.error('Get session error:', error)
-      return null
-    }
-  },
-
-  async signInWithEmail(email, password) {
-    try {
-      const { data, error } = await authHelpers.signIn(email, password)
-      
-      if (error) {
-        // Handle specific auth errors
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Email atau password salah!')
-        } else if (error.message.includes('Email not confirmed')) {
-          throw new Error('Silakan konfirmasi email Anda terlebih dahulu!')
-        } else {
-          throw new Error(error.message)
+        // Check if Supabase is available
+        if (typeof window.supabase === 'undefined') {
+            console.error('Supabase library not loaded');
+            throw new Error('Supabase library not loaded');
         }
-      }
 
-      if (data.user) {
-        // Trigger custom event untuk update UI
-        window.dispatchEvent(new CustomEvent('authStateChange', {
-          detail: { event: 'SIGNED_IN', session: data.session }
-        }))
-      }
+        const supabaseUrl = 'https://wspvspxhjcyviyugcycs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzcHZzcHhoamN5dml5dWdjeWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDM3NTAsImV4cCI6MjA2NDY3OTc1MH0.3wFEhkitH_v_KEZIWEtZ0safLjNPTQhKWD2HUWmixg4';
 
-      return data
-    } catch (error) {
-      console.error('Sign in error:', error)
-      throw error
-    }
-  },
-
-  async signUpWithEmail(email, password, fullName) {
-    try {
-      const { data, error } = await authHelpers.signUp(email, password, {
-        full_name: fullName
-      })
-
-      if (error) {
-        if (error.message.includes('User already registered')) {
-          throw new Error('Email sudah terdaftar!')
-        } else {
-          throw new Error(error.message)
+        // Create Supabase client
+        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Verify the client was created properly
+        if (!supabase || !supabase.auth) {
+            throw new Error('Failed to create Supabase client');
         }
-      }
 
-      // Jika user langsung masuk (tanpa konfirmasi email)
-      if (data.user && data.session) {
-        window.dispatchEvent(new CustomEvent('authStateChange', {
-          detail: { event: 'SIGNED_IN', session: data.session }
-        }))
-        return { user: data.user, message: 'Registrasi berhasil!' }
-      } else {
-        // Jika perlu konfirmasi email
-        return { 
-          user: null, 
-          message: 'Registrasi berhasil! Silakan cek email untuk konfirmasi.' 
-        }
-      }
+        console.log('Supabase client initialized successfully');
+        return true;
     } catch (error) {
-      console.error('Sign up error:', error)
-      throw error
+        console.error('Supabase initialization error:', error);
+        throw error;
     }
-  },
-
-  async signOut() {
-    try {
-      const { error } = await authHelpers.signOut()
-      if (error) throw error
-
-      window.dispatchEvent(new CustomEvent('authStateChange', {
-        detail: { event: 'SIGNED_OUT', session: null }
-      }))
-    } catch (error) {
-      console.error('Sign out error:', error)
-      throw error
-    }
-  }
 }
 
-// Setup auth state listener
-authHelpers.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session)
-  
-  window.dispatchEvent(new CustomEvent('authStateChange', {
-    detail: { event, session }
-  }))
-})
+// Auth functions
+const authFunctions = {
+    async getSession() {
+        try {
+            if (!supabase) {
+                initializeSupabase();
+            }
+            
+            const { data, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            return data.session;
+        } catch (error) {
+            console.error('Error getting session:', error);
+            throw error;
+        }
+    },
 
-// Make available globally
-window.authFunctions = authFunctions
+    async signInWithEmail(email, password) {
+        try {
+            if (!supabase) {
+                initializeSupabase();
+            }
 
-export default authFunctions
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            
+            if (error) throw error;
+            
+            // Dispatch custom event for auth state change
+            window.dispatchEvent(new CustomEvent('authStateChange', {
+                detail: { event: 'SIGNED_IN', session: data.session }
+            }));
+            
+            return {
+                user: {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.user_metadata?.full_name || 'Pengguna'
+                }
+            };
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    },
+
+    async signUpWithEmail(email, password, name) {
+        try {
+            if (!supabase) {
+                initializeSupabase();
+            }
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: name
+                    }
+                }
+            });
+            
+            if (error) throw error;
+            
+            if (data.user) {
+                window.dispatchEvent(new CustomEvent('authStateChange', {
+                    detail: { event: 'SIGNED_UP', session: data.session }
+                }));
+            }
+            
+            return {
+                user: data.user ? {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.user_metadata?.full_name || name
+                } : null,
+                message: 'Silakan cek email Anda untuk verifikasi'
+            };
+        } catch (error) {
+            console.error('Registration error:', error);
+            throw error;
+        }
+    },
+
+    async signOut() {
+        try {
+            if (!supabase) {
+                initializeSupabase();
+            }
+
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            
+            window.dispatchEvent(new CustomEvent('authStateChange', {
+                detail: { event: 'SIGNED_OUT' }
+            }));
+        } catch (error) {
+            console.error('Logout error:', error);
+            throw error;
+        }
+    },
+
+    // Handle auth state changes
+    setupAuthListener() {
+        try {
+            if (!supabase) {
+                initializeSupabase();
+            }
+
+            supabase.auth.onAuthStateChange((event, session) => {
+                window.dispatchEvent(new CustomEvent('authStateChange', {
+                    detail: { event, session }
+                }));
+            });
+        } catch (error) {
+            console.error('Error setting up auth listener:', error);
+        }
+    }
+};
+
+// Initialize when DOM is ready or Supabase is available
+function initAuth() {
+    try {
+        initializeSupabase();
+        authFunctions.setupAuthListener();
+        
+        // Expose auth functions to window
+        window.authFunctions = authFunctions;
+        window.supabase = supabase; // Also expose supabase client
+        
+        console.log('Auth module initialized successfully');
+    } catch (error) {
+        console.error('Auth initialization failed:', error);
+        // Still expose functions for fallback handling
+        window.authFunctions = authFunctions;
+    }
+}
+
+// Initialize immediately if Supabase is already loaded, otherwise wait
+if (typeof window.supabase !== 'undefined') {
+    initAuth();
+} else {
+    // Wait for Supabase to load
+    window.addEventListener('load', () => {
+        // Give a small delay to ensure all scripts are loaded
+        setTimeout(initAuth, 100);
+    });
+}

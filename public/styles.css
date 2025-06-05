@@ -749,3 +749,15 @@ body {
         max-width: 280px;
     }
 }
+
+.contact-link {
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.contact-link:hover {
+    color: var(--primary-green);
+    text-decoration: underline;
+}

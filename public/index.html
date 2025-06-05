@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biawak Foundation - Blockchain & Cryptocurrency Community</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Biawak Foundation - Blockchain & Cryptocurrency Community</title>
+        <link rel="stylesheet" href="styles.css">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+        <!-- Favicon untuk berbagai perangkat -->
+        <link rel="icon" href="src/img/favicon.ico" type="image/x-icon">
+        <link rel="icon" type="image/png" sizes="32x32" href="src/img/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="src/img/favicon-16x16.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="src/img/apple-touch-icon.png">
+        <link rel="manifest" href="src/img/site.webmanifest">
+        <meta name="theme-color" content="#2E8B57">
+    </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar">
@@ -41,8 +47,8 @@
                 <h1>Biawak Foundation</h1>
                 <p class="hero-subtitle">Komunitas Blockchain & Cryptocurrency Indonesia</p>
                 <p class="hero-description">
-                    Lembaga komunitas publik non-profit yang berdedikasi untuk mempromosikan adopsi dan 
-                    pemanfaatan teknologi blockchain serta cryptocurrency secara bertanggung jawab dan berkelanjutan.
+                    Komunitas publik non-profit yang berdedikasi untuk mempromosikan adopsi dan 
+                    pemanfaatan teknologi blockchain serta cryptocurrency.
                 </p>
                 <div class="hero-buttons">
                     <button class="btn-primary" onclick="showRegisterModal()">Bergabung Sekarang</button>
@@ -64,8 +70,8 @@
             <div class="about-grid">
                 <div class="about-card">
                     <i class="fas fa-shield-alt"></i>
-                    <h3>Bertanggung Jawab</h3>
-                    <p>Mempromosikan penggunaan teknologi blockchain yang aman dan bertanggung jawab</p>
+                    <h3>Keamanan</h3>
+                    <p>Mempromosikan penggunaan teknologi blockchain yang aman</p>
                 </div>
                 <div class="about-card">
                     <i class="fas fa-leaf"></i>
@@ -105,23 +111,27 @@
     </section>
 
     <!-- Contact Section -->
-    <section id="contact" class="contact">
-        <div class="container">
-            <h2>Hubungi Kami</h2>
-            <div class="contact-content">
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <i class="fas fa-envelope"></i>
-                        <span>info@biawakfoundation.org</span>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fab fa-telegram"></i>
-                        <span>@dropscryptoX</span>
-                    </div>
+<section id="contact" class="contact">
+    <div class="container">
+        <h2>Join Our Community</h2>
+        <div class="contact-content">
+            <div class="contact-info">
+                <div class="contact-item">
+                    <i class="fas fa-envelope"></i>
+                    <a href="mailto:info@biawakfoundation.org" class="contact-link">info@biawakfoundation.org</a>
+                </div>
+                <div class="contact-item">
+                    <i class="fab fa-telegram"></i>
+                    <a href="https://t.me/dropscryptoX" target="_blank" class="contact-link">@dropscryptoX</a>
+                </div>
+                <div class="contact-item">
+                    <i class="fab fa-whatsapp"></i>
+                    <a href="https://chat.whatsapp.com/E2MeNmI9zzcCIoy8sDPuiG" target="_blank" class="contact-link">Grup WhatsApp</a>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <!-- Footer -->
     <footer class="footer">
@@ -131,7 +141,7 @@
                     <i class="fas fa-dragon biawak-icon"></i>
                     <span>Biawak Foundation</span>
                 </div>
-                <p>&copy; <span id="current-year"></span> Biawak Foundation. Semua hak dilindungi.</p>
+                <p>&copy; <span id="current-year"></span> Biawak Foundation.</p>
             </div>
         </div>
     </footer>

@@ -1,7 +1,9 @@
 // Main application state
 const AppState = {
     currentUser: null,
-    isInitialized: false
+    isInitialized: false,
+    initializationAttempts: 0,
+    maxInitializationAttempts: 3
 };
 
 // Initialize app when DOM is loaded
@@ -9,28 +11,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         if (AppState.isInitialized) return;
         
+        console.log('Starting app initialization...');
+        
         // Set current year in footer
-        document.getElementById('current-year').textContent = new Date().getFullYear();
+        const yearElement = document.getElementById('current-year');
+        if (yearElement) {
+            yearElement.textContent = new Date().getFullYear();
+        }
         
         // Setup event listeners
         setupEventListeners();
         
-        // Check auth state - tambahkan pengecekan jika authFunctions sudah terdefinisi
-        if (typeof authFunctions !== 'undefined') {
-            await checkAuthState();
-            
-            // Load posts - hanya jika postsFunctions sudah terdefinisi
-            if (typeof postsFunctions !== 'undefined') {
-                await loadPosts();
-            }
-        }
+        // Wait for auth functions to be available with retry logic
+        await waitForAuthFunctions();
         
         AppState.isInitialized = true;
+        console.log('App initialization completed successfully');
     } catch (error) {
         console.error('Initialization error:', error);
         showFallbackUI();
     }
 });
+
+// Wait for auth functions to be available with retry logic
+async function waitForAuthFunctions() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 10;
+        const checkInterval = 500; // 500ms
+
+        const checkAuth = async () => {
+            attempts++;
+            console.log(`Checking for auth functions (attempt ${attempts}/${maxAttempts})`);
+            
+            if (typeof window.authFunctions !== 'undefined') {
+                try {
+                    await checkAuthState();
+                    await loadPosts();
+                    resolve();
+                } catch (error) {
+                    console.error('Error during auth/posts initialization:', error);
+                    showFallbackUI();
+                    resolve(); // Resolve anyway to not block the app
+                }
+                return;
+            }
+            
+            if (attempts >= maxAttempts) {
+                console.error('Auth functions not available after maximum attempts');
+                showFallbackUI();
+                reject(new Error('Auth functions not available'));
+                return;
+            }
+            
+            setTimeout(checkAuth, checkInterval);
+        };
+        
+        checkAuth();
+    });
+}
 
 // Setup all event listeners
 function setupEventListeners() {
@@ -48,21 +87,58 @@ function setupEventListeners() {
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('modal')) {
             e.target.style.display = 'none';
-            e.target.querySelector('form')?.reset();
+            const form = e.target.querySelector('form');
+            if (form) form.reset();
         }
     });
 
     // Navbar scroll effect
-    window.addEventListener('scroll', helpers.throttle(handleNavbarScroll, 100));
+    if (typeof helpers !== 'undefined' && helpers.throttle) {
+        window.addEventListener('scroll', helpers.throttle(handleNavbarScroll, 100));
+    } else {
+        window.addEventListener('scroll', handleNavbarScroll);
+    }
 
     // Auth state changes
     window.addEventListener('authStateChange', handleAuthStateChange);
 }
 
+// Navigation functions
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        const offsetTop = section.offsetTop - 80; // Account for fixed navbar
+        window.scrollTo({
+            top: offsetTop,
+            behavior: 'smooth'
+        });
+    }
+}
+
+function toggleMobileMenu(force = null) {
+    const navMenu = document.getElementById('nav-menu');
+    const hamburger = document.querySelector('.hamburger');
+    
+    if (!navMenu || !hamburger) return;
+    
+    if (force !== null) {
+        navMenu.classList.toggle('active', force);
+        hamburger.classList.toggle('active', force);
+    } else {
+        navMenu.classList.toggle('active');
+        hamburger.classList.toggle('active');
+    }
+}
+
 // Check authentication state
 async function checkAuthState() {
     try {
-        const session = await authFunctions.getSession();
+        if (typeof window.authFunctions === 'undefined') {
+            console.log('Auth functions not available, skipping auth check');
+            return;
+        }
+
+        const session = await window.authFunctions.getSession();
         if (session) {
             AppState.currentUser = {
                 id: session.user.id,
@@ -70,10 +146,14 @@ async function checkAuthState() {
                 name: session.user.user_metadata?.full_name || 'Pengguna'
             };
             console.log('User authenticated:', AppState.currentUser.name);
+        } else {
+            console.log('No active session found');
         }
+        
+        updateUIBasedOnAuth();
     } catch (error) {
         console.error('Auth state check error:', error);
-        throw error;
+        // Don't throw - let the app continue with fallback UI
     }
 }
 
@@ -81,16 +161,22 @@ async function checkAuthState() {
 function handleAuthStateChange(event) {
     const { event: authEvent, session } = event.detail;
     
+    console.log('Auth state change:', authEvent);
+    
     if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED') {
         AppState.currentUser = {
             id: session.user.id,
             email: session.user.email,
             name: session.user.user_metadata?.full_name || 'Pengguna'
         };
-        notifications.show('Berhasil login!', 'success');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Berhasil login!', 'success');
+        }
     } else if (authEvent === 'SIGNED_OUT') {
         AppState.currentUser = null;
-        notifications.show('Berhasil logout!', 'success');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Berhasil logout!', 'success');
+        }
     }
     
     updateUIBasedOnAuth();
@@ -105,8 +191,12 @@ function updateUIBasedOnAuth() {
     if (!authButtons) return;
     
     if (AppState.currentUser) {
+        const userName = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(AppState.currentUser.name)
+            : AppState.currentUser.name;
+            
         authButtons.innerHTML = `
-            <span class="user-greeting">Halo, ${helpers.escapeHtml(AppState.currentUser.name)}!</span>
+            <span class="user-greeting">Halo, ${userName}!</span>
             <button class="btn-secondary" onclick="handleLogout()">Keluar</button>
         `;
         if (createPostBtn) createPostBtn.style.display = 'block';
@@ -131,7 +221,8 @@ function handleNavbarScroll() {
 
 // Show fallback UI when initialization fails
 function showFallbackUI() {
-    // Pastikan hanya mengeksekusi jika elemen ada
+    console.log('Showing fallback UI');
+    
     const authButtons = document.querySelector('.nav-auth');
     const createPostBtn = document.getElementById('create-post-btn');
     
@@ -147,7 +238,10 @@ function showFallbackUI() {
     }
     
     showFallbackPosts();
-    notifications.show('Terjadi masalah saat memuat aplikasi. Silakan refresh halaman.', 'error');
+    
+    if (typeof window.notifications !== 'undefined') {
+        window.notifications.show('Terjadi masalah saat memuat aplikasi. Silakan refresh halaman.', 'error');
+    }
 }
 
 // Modal functions
@@ -155,7 +249,8 @@ function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'block';
-        modal.querySelector('input')?.focus();
+        const input = modal.querySelector('input');
+        if (input) input.focus();
     }
 }
 
@@ -163,7 +258,8 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
-        modal.querySelector('form')?.reset();
+        const form = modal.querySelector('form');
+        if (form) form.reset();
     }
 }
 
@@ -172,7 +268,9 @@ function showRegisterModal() { showModal('registerModal'); }
 
 function showCreatePostModal() {
     if (!AppState.currentUser) {
-        notifications.show('Silakan login terlebih dahulu!', 'error');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Silakan login terlebih dahulu!', 'error');
+        }
         showLoginModal();
         return;
     }
@@ -210,10 +308,19 @@ async function handleLogin(event) {
             throw new Error('Email dan password harus diisi!');
         }
         
-        await authFunctions.signInWithEmail(email, password);
+        if (typeof window.authFunctions === 'undefined') {
+            throw new Error('Sistem autentikasi tidak tersedia. Silakan refresh halaman.');
+        }
+        
+        await window.authFunctions.signInWithEmail(email, password);
         closeModal('loginModal');
     } catch (error) {
-        notifications.show(error.message || 'Terjadi kesalahan saat login', 'error');
+        const message = error.message || 'Terjadi kesalahan saat login';
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'error');
+        } else {
+            alert(message);
+        }
         console.error('Login error:', error);
     } finally {
         // Reset button state
@@ -257,17 +364,29 @@ async function handleRegister(event) {
             throw new Error('Format email tidak valid!');
         }
         
-        const result = await authFunctions.signUpWithEmail(email, password, name);
+        if (typeof window.authFunctions === 'undefined') {
+            throw new Error('Sistem autentikasi tidak tersedia. Silakan refresh halaman.');
+        }
         
-        if (result.user) {
-            closeModal('registerModal');
-            notifications.show('Registrasi berhasil! Selamat datang!', 'success');
+        const result = await window.authFunctions.signUpWithEmail(email, password, name);
+        
+        closeModal('registerModal');
+        const message = result.user 
+            ? 'Registrasi berhasil! Selamat datang!' 
+            : (result.message || 'Registrasi berhasil! Silakan cek email untuk verifikasi');
+            
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'success');
         } else {
-            closeModal('registerModal');
-            notifications.show(result.message || 'Registrasi berhasil! Silakan cek email untuk verifikasi', 'success');
+            alert(message);
         }
     } catch (error) {
-        notifications.show(error.message || 'Terjadi kesalahan saat registrasi', 'error');
+        const message = error.message || 'Terjadi kesalahan saat registrasi';
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'error');
+        } else {
+            alert(message);
+        }
         console.error('Registration error:', error);
     } finally {
         // Reset button state
@@ -278,9 +397,18 @@ async function handleRegister(event) {
 
 async function handleLogout() {
     try {
-        await authFunctions.signOut();
+        if (typeof window.authFunctions === 'undefined') {
+            throw new Error('Sistem autentikasi tidak tersedia. Silakan refresh halaman.');
+        }
+        
+        await window.authFunctions.signOut();
     } catch (error) {
-        notifications.show(error.message || 'Terjadi kesalahan saat logout', 'error');
+        const message = error.message || 'Terjadi kesalahan saat logout';
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'error');
+        } else {
+            alert(message);
+        }
         console.error('Logout error:', error);
     }
 }
@@ -299,7 +427,13 @@ async function loadPosts() {
     `;
     
     try {
-        const posts = await postsFunctions.fetchPostsWithComments();
+        if (typeof window.postsFunctions === 'undefined') {
+            console.log('Posts functions not available, showing fallback');
+            showFallbackPosts();
+            return;
+        }
+
+        const posts = await window.postsFunctions.fetchPostsWithComments();
         renderPosts(posts);
     } catch (error) {
         console.error('Error loading posts:', error);
@@ -334,38 +468,53 @@ function renderPosts(posts) {
         return;
     }
     
-    postsContainer.innerHTML = posts.map(post => `
-        <div class="post-card">
-            <div class="post-header">
-                <div>
-                    <h3 class="post-title">${helpers.escapeHtml(post.title)}</h3>
-                    <div class="post-meta">
-                        Oleh ${helpers.escapeHtml(post.author_name)} • ${helpers.formatDate(post.created_at)}
+    postsContainer.innerHTML = posts.map(post => {
+        const title = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(post.title) 
+            : post.title;
+        const authorName = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(post.author_name) 
+            : post.author_name;
+        const content = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(post.content).replace(/\n/g, '<br>') 
+            : post.content.replace(/\n/g, '<br>');
+        const formattedDate = typeof window.helpers !== 'undefined' 
+            ? window.helpers.formatDate(post.created_at) 
+            : new Date(post.created_at).toLocaleDateString('id-ID');
+
+        return `
+            <div class="post-card">
+                <div class="post-header">
+                    <div>
+                        <h3 class="post-title">${title}</h3>
+                        <div class="post-meta">
+                            Oleh ${authorName} • ${formattedDate}
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="post-content">
-                ${helpers.escapeHtml(post.content).replace(/\n/g, '<br>')}
-            </div>
-            <div class="post-actions">
-                <button onclick="toggleComments('${post.id}')">
-                    <i class="fas fa-comments"></i> 
-                    Komentar (${post.comments.length})
-                </button>
-            </div>
-            <div class="comments-section" id="comments-${post.id}" style="display: none;">
-                <div class="comments-list">
-                    ${renderComments(post.comments)}
+                <div class="post-content">
+                    ${content}
                 </div>
-                ${AppState.currentUser ? `
-                    <form class="comment-form" onsubmit="handleAddComment(event, '${post.id}')">
-                        <textarea placeholder="Tulis komentar..." required></textarea>
-                        <button type="submit" class="btn-primary">Kirim Komentar</button>
-                    </form>
-                ` : '<p>Login untuk berkomentar</p>'}
+                <div class="post-actions">
+                    <button onclick="toggleComments('${post.id}')">
+                        <i class="fas fa-comments"></i> 
+                        Komentar (${post.comments.length})
+                    </button>
+                </div>
+                <div class="comments-section" id="comments-${post.id}" style="display: none;">
+                    <div class="comments-list">
+                        ${renderComments(post.comments)}
+                    </div>
+                    ${AppState.currentUser ? `
+                        <form class="comment-form" onsubmit="handleAddComment(event, '${post.id}')">
+                            <textarea placeholder="Tulis komentar..." required></textarea>
+                            <button type="submit" class="btn-primary">Kirim Komentar</button>
+                        </form>
+                    ` : '<p>Login untuk berkomentar</p>'}
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderComments(comments) {
@@ -373,13 +522,25 @@ function renderComments(comments) {
         return '<p>Belum ada komentar</p>';
     }
     
-    return comments.map(comment => `
-        <div class="comment">
-            <div class="comment-author">${helpers.escapeHtml(comment.author_name)}</div>
-            <div class="comment-content">${helpers.escapeHtml(comment.content)}</div>
-            <div class="comment-date">${helpers.formatDate(comment.created_at)}</div>
-        </div>
-    `).join('');
+    return comments.map(comment => {
+        const authorName = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(comment.author_name) 
+            : comment.author_name;
+        const content = typeof window.helpers !== 'undefined' 
+            ? window.helpers.escapeHtml(comment.content) 
+            : comment.content;
+        const formattedDate = typeof window.helpers !== 'undefined' 
+            ? window.helpers.formatDate(comment.created_at) 
+            : new Date(comment.created_at).toLocaleDateString('id-ID');
+
+        return `
+            <div class="comment">
+                <div class="comment-author">${authorName}</div>
+                <div class="comment-content">${content}</div>
+                <div class="comment-date">${formattedDate}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 function toggleComments(postId) {
@@ -393,7 +554,9 @@ async function handleAddComment(event, postId) {
     event.preventDefault();
     
     if (!AppState.currentUser) {
-        notifications.show('Silakan login terlebih dahulu!', 'error');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Silakan login terlebih dahulu!', 'error');
+        }
         showLoginModal();
         return;
     }
@@ -402,20 +565,33 @@ async function handleAddComment(event, postId) {
     const content = textarea.value.trim();
     
     if (!content) {
-        notifications.show('Komentar tidak boleh kosong!', 'error');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Komentar tidak boleh kosong!', 'error');
+        }
         return;
     }
     
     try {
-        await postsFunctions.addCommentToPost(postId, content);
+        if (typeof window.postsFunctions === 'undefined') {
+            throw new Error('Sistem posting tidak tersedia. Silakan refresh halaman.');
+        }
+
+        await window.postsFunctions.addCommentToPost(postId, content);
         textarea.value = '';
-        notifications.show('Komentar berhasil ditambahkan!', 'success');
+        
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Komentar berhasil ditambahkan!', 'success');
+        }
+        
         await loadPosts();
         
         // Re-open comments section
         setTimeout(() => toggleComments(postId), 100);
     } catch (error) {
-        notifications.show(error.message || 'Gagal menambahkan komentar', 'error');
+        const message = error.message || 'Gagal menambahkan komentar';
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'error');
+        }
         console.error('Error adding comment:', error);
     }
 }
@@ -424,56 +600,63 @@ async function handleCreatePost(event) {
     event.preventDefault();
     
     if (!AppState.currentUser) {
-        notifications.show('Silakan login terlebih dahulu!', 'error');
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Silakan login terlebih dahulu!', 'error');
+        }
         showLoginModal();
         return;
     }
     
-    const title = document.getElementById('postTitle').value.trim();
-    const content = document.getElementById('postContent').value.trim();
-    
-    if (!title || !content) {
-        notifications.show('Judul dan konten harus diisi!', 'error');
-        return;
-    }
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     
     try {
-        await postsFunctions.createNewPost(title, content);
+        // Set loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        
+        const title = document.getElementById('postTitle').value.trim();
+        const content = document.getElementById('postContent').value.trim();
+        
+        // Validation
+        if (!title || !content) {
+            throw new Error('Judul dan konten harus diisi!');
+        }
+        
+        if (title.length > 100) {
+            throw new Error('Judul terlalu panjang (maksimal 100 karakter)!');
+        }
+        
+        if (content.length > 2000) {
+            throw new Error('Konten terlalu panjang (maksimal 2000 karakter)!');
+        }
+        
+        if (typeof window.postsFunctions === 'undefined') {
+            throw new Error('Sistem posting tidak tersedia. Silakan refresh halaman.');
+        }
+        
+        await window.postsFunctions.createNewPost(title, content);
+        
         closeModal('createPostModal');
-        notifications.show('Postingan berhasil dibuat!', 'success');
+        
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show('Postingan berhasil dibuat!', 'success');
+        }
+        
         await loadPosts();
+        
     } catch (error) {
-        notifications.show(error.message || 'Gagal membuat postingan', 'error');
+        const message = error.message || 'Gagal membuat postingan';
+        if (typeof window.notifications !== 'undefined') {
+            window.notifications.show(message, 'error');
+        } else {
+            alert(message);
+        }
         console.error('Error creating post:', error);
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 }
-
-// Navigation functions
-function toggleMobileMenu(forceClose = false) {
-    const navMenu = document.getElementById('nav-menu');
-    if (navMenu) {
-        navMenu.classList.toggle('active', !forceClose);
-    }
-}
-
-function scrollToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-// Expose functions to window for HTML onclick attributes
-window.showLoginModal = showLoginModal;
-window.showRegisterModal = showRegisterModal;
-window.showCreatePostModal = showCreatePostModal;
-window.switchToRegister = switchToRegister;
-window.switchToLogin = switchToLogin;
-window.handleLogin = handleLogin;
-window.handleRegister = handleRegister;
-window.handleLogout = handleLogout;
-window.handleCreatePost = handleCreatePost;
-window.toggleComments = toggleComments;
-window.handleAddComment = handleAddComment;
-window.scrollToSection = scrollToSection;
-window.toggleMobileMenu = toggleMobileMenu;
